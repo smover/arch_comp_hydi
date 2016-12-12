@@ -1,0 +1,156 @@
+MODULE main
+
+INVARSPEC ! (
+SM_1.SM - SM_2.SM > 2* max_drift | SM_1.SM - SM_3.SM > 2* max_drift | SM_1.SM - SM_4.SM > 2* max_drift | SM_1.SM - SM_5.SM > 2* max_drift | SM_1.SM - SM_6.SM > 2* max_drift | SM_1.SM - SM_7.SM > 2* max_drift | SM_1.SM - SM_8.SM > 2* max_drift | SM_1.SM - SM_9.SM > 2* max_drift |
+SM_2.SM - SM_1.SM > 2* max_drift | SM_2.SM - SM_3.SM > 2* max_drift | SM_2.SM - SM_4.SM > 2* max_drift | SM_2.SM - SM_5.SM > 2* max_drift | SM_2.SM - SM_6.SM > 2* max_drift | SM_2.SM - SM_7.SM > 2* max_drift | SM_2.SM - SM_8.SM > 2* max_drift | SM_2.SM - SM_9.SM > 2* max_drift |
+SM_3.SM - SM_2.SM > 2* max_drift | SM_3.SM - SM_1.SM > 2* max_drift | SM_3.SM - SM_4.SM > 2* max_drift | SM_3.SM - SM_5.SM > 2* max_drift | SM_3.SM - SM_6.SM > 2* max_drift | SM_3.SM - SM_7.SM > 2* max_drift | SM_3.SM - SM_8.SM > 2* max_drift | SM_3.SM - SM_9.SM > 2* max_drift |
+SM_4.SM - SM_2.SM > 2* max_drift | SM_4.SM - SM_3.SM > 2* max_drift | SM_4.SM - SM_1.SM > 2* max_drift | SM_4.SM - SM_5.SM > 2* max_drift | SM_4.SM - SM_6.SM > 2* max_drift | SM_4.SM - SM_7.SM > 2* max_drift | SM_4.SM - SM_8.SM > 2* max_drift | SM_4.SM - SM_9.SM > 2* max_drift |
+SM_5.SM - SM_2.SM > 2* max_drift | SM_5.SM - SM_3.SM > 2* max_drift | SM_5.SM - SM_4.SM > 2* max_drift | SM_5.SM - SM_1.SM > 2* max_drift | SM_5.SM - SM_6.SM > 2* max_drift | SM_5.SM - SM_7.SM > 2* max_drift | SM_5.SM - SM_8.SM > 2* max_drift | SM_5.SM - SM_9.SM > 2* max_drift |
+SM_6.SM - SM_2.SM > 2* max_drift | SM_6.SM - SM_3.SM > 2* max_drift | SM_6.SM - SM_4.SM > 2* max_drift | SM_6.SM - SM_5.SM > 2* max_drift | SM_6.SM - SM_1.SM > 2* max_drift | SM_6.SM - SM_7.SM > 2* max_drift | SM_6.SM - SM_8.SM > 2* max_drift | SM_6.SM - SM_9.SM > 2* max_drift |
+SM_7.SM - SM_2.SM > 2* max_drift | SM_7.SM - SM_3.SM > 2* max_drift | SM_7.SM - SM_4.SM > 2* max_drift | SM_7.SM - SM_5.SM > 2* max_drift | SM_7.SM - SM_6.SM > 2* max_drift | SM_7.SM - SM_1.SM > 2* max_drift | SM_7.SM - SM_8.SM > 2* max_drift | SM_7.SM - SM_9.SM > 2* max_drift |
+SM_8.SM - SM_2.SM > 2* max_drift | SM_8.SM - SM_3.SM > 2* max_drift | SM_8.SM - SM_4.SM > 2* max_drift | SM_8.SM - SM_5.SM > 2* max_drift | SM_8.SM - SM_6.SM > 2* max_drift | SM_8.SM - SM_7.SM > 2* max_drift | SM_8.SM - SM_1.SM > 2* max_drift | SM_8.SM - SM_9.SM > 2* max_drift |
+SM_9.SM - SM_2.SM > 2* max_drift | SM_9.SM - SM_3.SM > 2* max_drift | SM_9.SM - SM_4.SM > 2* max_drift | SM_9.SM - SM_5.SM > 2* max_drift | SM_9.SM - SM_6.SM > 2* max_drift | SM_9.SM - SM_7.SM > 2* max_drift | SM_9.SM - SM_8.SM > 2* max_drift | SM_9.SM - SM_1.SM > 2* max_drift
+);
+
+DEFINE max_drift := 0.001;
+INVAR delay = 20;
+INVAR -max_drift <= drift_1 & drift_1 <= max_drift;
+INVAR -max_drift <= drift_2 & drift_2 <= max_drift;
+INVAR -max_drift <= drift_3 & drift_3 <= max_drift;
+INVAR -max_drift <= drift_4 & drift_4 <= max_drift;
+INVAR -max_drift <= drift_5 & drift_5 <= max_drift;
+INVAR -max_drift <= drift_6 & drift_6 <= max_drift;
+INVAR -max_drift <= drift_7 & drift_7 <= max_drift;
+INVAR -max_drift <= drift_8 & drift_8 <= max_drift;
+INVAR -max_drift <= drift_9 & drift_9 <= max_drift;
+
+
+VAR
+  delay : real;
+
+  drift_1 : real;
+  drift_2 : real;
+  drift_3 : real;
+  drift_4 : real;
+  drift_5 : real;
+  drift_6 : real;
+  drift_7 : real;
+  drift_8 : real;
+  drift_9 : real;
+
+  CM_1 : CM(SM_3.SM, delay);
+  CM_2 : CM(SM_3.SM, delay);
+
+  SM_1 : SM(CM_1.CM, CM_2.CM, drift_1);
+  SM_2 : SM(CM_1.CM, CM_2.CM, drift_2);
+  SM_3 : SM(CM_1.CM, CM_2.CM, drift_3);
+  SM_4 : SM(CM_1.CM, CM_2.CM, drift_4);
+  SM_5 : SM(CM_1.CM, CM_2.CM, drift_5);
+
+  SM_6 : SM(CM_1.CM, CM_2.CM, drift_6);
+  SM_7 : SM(CM_1.CM, CM_2.CM, drift_7);
+  SM_8 : SM(CM_1.CM, CM_2.CM, drift_8);
+  SM_9 : SM(CM_1.CM, CM_2.CM, drift_9);
+
+SYNC CM_1, CM_2 EVENTS send, send;
+SYNC CM_1, SM_1 EVENTS send, send;
+SYNC CM_1, SM_2 EVENTS send, send;
+SYNC CM_1, SM_3 EVENTS send, send;
+SYNC CM_1, SM_4 EVENTS send, send;
+SYNC CM_1, SM_5 EVENTS send, send;
+SYNC CM_1, SM_6 EVENTS send, send;
+SYNC CM_1, SM_7 EVENTS send, send;
+SYNC CM_1, SM_8 EVENTS send, send;
+SYNC CM_1, SM_9 EVENTS send, send;
+
+SYNC CM_1, CM_2 EVENTS sync, sync;
+SYNC CM_1, SM_1 EVENTS sync, sync;
+SYNC CM_1, SM_2 EVENTS sync, sync;
+SYNC CM_1, SM_3 EVENTS sync, sync;
+SYNC CM_1, SM_4 EVENTS sync, sync;
+SYNC CM_1, SM_5 EVENTS sync, sync;
+SYNC CM_1, SM_6 EVENTS sync, sync;
+SYNC CM_1, SM_7 EVENTS sync, sync;
+SYNC CM_1, SM_8 EVENTS sync, sync;
+SYNC CM_1, SM_9 EVENTS sync, sync;
+
+SYNC CM_1, CM_2 EVENTS back, back;
+SYNC CM_1, SM_1 EVENTS back, back;
+SYNC CM_1, SM_2 EVENTS back, back;
+SYNC CM_1, SM_3 EVENTS back, back;
+SYNC CM_1, SM_4 EVENTS back, back;
+SYNC CM_1, SM_5 EVENTS back, back;
+SYNC CM_1, SM_6 EVENTS back, back;
+SYNC CM_1, SM_7 EVENTS back, back;
+SYNC CM_1, SM_8 EVENTS back, back;
+SYNC CM_1, SM_9 EVENTS back, back;
+
+
+MODULE CM(SM_in, delay)
+
+VAR
+  x_CM : continuous;
+  CM : real;
+  location : {receive, correct1, correct2, waiting};
+
+EVENT sync, send, back;
+
+INIT CM = 0 & x_CM = 0 & location = receive;
+FLOW der(x_CM) = 1
+
+TRANS
+  EVENT = sync ->
+  (
+   (location = receive & next(location) = correct1 &
+     next(CM) = SM_in &
+     next(x_CM) = x_CM
+   ) |
+   (location = correct1 & next(location) = correct2 &
+    next(CM) = CM &    
+    next(x_CM) = x_CM
+   )
+  );
+TRANS
+  EVENT = back ->
+  (
+   location = correct2 & next(location) = waiting &
+   next(CM) = CM &
+   next(x_CM) = x_CM
+  )
+TRANS
+  EVENT = send ->
+  (
+   location = waiting & next(location) = receive &
+   x_CM >= delay &
+   next(CM) = CM &
+   next(x_CM) = 0
+  )
+
+INVAR
+  location != waiting -> (x_CM <= 0)
+INVAR
+  location = waiting -> (x_CM <= delay)
+
+
+MODULE SM(CM1, CM2, drift)
+VAR
+  SM : continuous;
+  location : {send, sync1, sync2, work};
+
+EVENT sync, send, back;
+
+INIT location = send & SM = 0
+FLOW der(SM) = 1
+
+TRANS
+  EVENT = sync ->
+  (
+   (location = send & next(location) = sync1 & next(SM) = SM) |
+   (location = sync1 & next(location) = sync2 & 2 * next(SM) = CM1 + CM2)
+  );
+TRANS
+  EVENT = back -> (location = sync2 & next(location) = work &
+                  next(SM) = SM)
+TRANS
+  EVENT = send -> (location = work & next(location) = send &
+                  next(SM) = SM + drift)

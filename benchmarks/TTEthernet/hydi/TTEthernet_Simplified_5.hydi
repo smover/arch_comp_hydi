@@ -1,0 +1,155 @@
+
+
+MODULE main
+
+INVARSPEC SM_1.location = work
+INVARSPEC SM_1.location = send
+INVARSPEC SM_1.location = sync1
+INVARSPEC SM_1.location = sync2
+
+INVARSPEC SM_3.location = work
+INVARSPEC SM_3.location = send
+INVARSPEC SM_3.location = sync1
+INVARSPEC SM_3.location = sync2
+
+INVARSPEC CM_1.location = receive
+INVARSPEC CM_1.location = correct1
+INVARSPEC CM_1.location = correct2
+INVARSPEC CM_1.location = waiting
+
+INVARSPEC CM_2.location = receive
+INVARSPEC CM_2.location = correct1
+INVARSPEC CM_2.location = correct2
+INVARSPEC CM_2.location = waiting
+
+INVARSPEC ! (drift_1 != drift_2 & drift_1 != drift_3 & drift_1 != drift_4 & drift_1 != drift_5 &
+             drift_2 != drift_3 & drift_2 != drift_4 & drift_2 != drift_5 &
+             drift_3 != drift_4 & drift_3 != drift_5 &
+             drift_4 != drift_5)
+
+INVARSPEC CM_1.CM = CM_2.CM
+
+INVARSPEC ! (
+SM_1.SM - SM_2.SM > 2* max_drift |  SM_1.SM - SM_3.SM > 2* max_drift |  SM_1.SM - SM_4.SM > 2* max_drift |  SM_1.SM - SM_5.SM > 2* max_drift |  SM_2.SM - SM_1.SM > 2* max_drift |  SM_2.SM - SM_3.SM > 2* max_drift |  SM_2.SM - SM_4.SM > 2* max_drift |  SM_2.SM - SM_5.SM > 2* max_drift |  SM_3.SM - SM_1.SM > 2* max_drift | SM_3.SM - SM_2.SM > 2* max_drift | SM_3.SM - SM_4.SM > 2* max_drift | SM_3.SM - SM_5.SM > 2* max_drift | SM_4.SM - SM_1.SM > 2* max_drift | SM_4.SM - SM_2.SM > 2* max_drift | SM_4.SM - SM_3.SM > 2* max_drift | SM_4.SM - SM_5.SM > 2* max_drift | SM_5.SM - SM_1.SM > 2* max_drift | SM_5.SM - SM_2.SM > 2* max_drift | SM_5.SM - SM_3.SM > 2* max_drift | SM_5.SM - SM_4.SM > 2* max_drift
+);
+
+DEFINE max_drift := 0.001;
+INVAR delay = 20;
+INVAR -max_drift <= drift_1 & drift_1 <= max_drift;
+INVAR -max_drift <= drift_2 & drift_2 <= max_drift;
+INVAR -max_drift <= drift_3 & drift_3 <= max_drift;
+INVAR -max_drift <= drift_4 & drift_4 <= max_drift;
+INVAR -max_drift <= drift_5 & drift_5 <= max_drift;
+
+
+FROZENVAR
+  delay : real;
+  drift_1 : real;
+  drift_2 : real;
+  drift_3 : real;
+  drift_4 : real;
+  drift_5 : real;
+
+VAR
+  CM_1 : CM(SM_3.SM, delay);
+  CM_2 : CM(SM_3.SM, delay);
+
+  SM_1 : SM(CM_1.CM, CM_2.CM, drift_1);
+  SM_2 : SM(CM_1.CM, CM_2.CM, drift_2);
+  SM_3 : SM(CM_1.CM, CM_2.CM, drift_3);
+  SM_4 : SM(CM_1.CM, CM_2.CM, drift_4);
+  SM_5 : SM(CM_1.CM, CM_2.CM, drift_5);
+
+SYNC CM_1, CM_2 EVENTS send, send;
+SYNC CM_1, SM_1 EVENTS send, send;
+SYNC CM_1, SM_2 EVENTS send, send;
+SYNC CM_1, SM_3 EVENTS send, send;
+SYNC CM_1, SM_4 EVENTS send, send;
+SYNC CM_1, SM_5 EVENTS send, send;
+
+SYNC CM_1, CM_2 EVENTS sync, sync;
+SYNC CM_1, SM_1 EVENTS sync, sync;
+SYNC CM_1, SM_2 EVENTS sync, sync;
+SYNC CM_1, SM_3 EVENTS sync, sync;
+SYNC CM_1, SM_4 EVENTS sync, sync;
+SYNC CM_1, SM_5 EVENTS sync, sync;
+
+SYNC CM_1, CM_2 EVENTS back, back;
+SYNC CM_1, SM_1 EVENTS back, back;
+SYNC CM_1, SM_2 EVENTS back, back;
+SYNC CM_1, SM_3 EVENTS back, back;
+SYNC CM_1, SM_4 EVENTS back, back;
+SYNC CM_1, SM_5 EVENTS back, back;
+
+
+
+MODULE CM(SM_in, delay)
+
+VAR
+  x_CM : continuous;
+  CM : real;
+  location : {receive, correct1, correct2, waiting};
+
+EVENT sync, send, back;
+
+INIT CM = 0 & x_CM = 0 & location = waiting;
+FLOW der(x_CM) = 1
+
+TRANS
+  EVENT = sync ->
+  (
+   (location = receive & next(location) = correct1 &
+     next(CM) = SM_in &
+     next(x_CM) = x_CM
+   ) |
+   (location = correct1 & next(location) = correct2 &
+    next(CM) = CM &
+    next(x_CM) = x_CM
+   )
+  );
+TRANS
+  EVENT = back ->
+  (
+   location = correct2 & next(location) = waiting &
+   next(CM) = CM &
+   next(x_CM) = x_CM
+  )
+TRANS
+  EVENT = send ->
+  (
+   location = waiting & next(location) = receive &
+   x_CM >= delay &
+   next(CM) = CM &
+   next(x_CM) = 0
+  )
+
+INVAR
+  location != waiting -> (x_CM <= 0)
+INVAR
+  location = waiting -> (x_CM <= delay)
+
+
+MODULE SM(CM1, CM2, drift)
+VAR
+  SM : continuous;
+  location : {work, send, sync1, sync2};
+
+EVENT sync, send, back;
+
+INIT location = work & SM = 1
+FLOW der(SM) = 1
+
+
+TRANS
+  EVENT = send -> (location = work & next(location) = send &
+                  next(SM) = SM + drift)
+TRANS
+  EVENT = sync ->
+  (
+   (location = send & next(location) = sync1 & next(SM) = SM) |
+   (location = sync1 & next(location) = sync2 & 2 * next(SM) = CM1 + CM2)
+  );
+
+TRANS
+  EVENT = back -> (location = sync2 & next(location) = work &
+                  next(SM) = SM)

@@ -1,0 +1,32 @@
+Questions
+
+
+1. The model is completely synchronous
+
+All the automata (CM1, CM2, SM1, ...) synchronize on the same labels sync, send, and back.
+This means that if CM1 moves on a transition labeled with sync, then all the other automata must also move on a transition labeled sync (the same for send and back).
+Now all the SMs and CMs move synchronously on send, sync and back.
+
+Is it the intended behavior?
+
+
+2. CM1 and CM2 are *exactly* the same.
+The two CMs always read from one SM, and never from different CMs.
+Hence, CM1 and CM2 are always the same!
+Why do we need them?
+
+3. Adding more SM automata in the protocol is not useful.
+One just need two SMs, the one that is used by the CMs to read the
+clock value and another that tries to sync its clock.
+
+
+4. Verification results with spaceex
+The verification, already for TTEthernet_Simplified_5.xml, terminates using the given configuration file TTEthernet_Simplified_5.cfg, but it does *NOT* reach a fix point.
+Spaceex reaches the limit of 500 iterations and stop, but the property is not proved.
+
+I left the model checker run for 3 hours and it did not terminate.
+
+
+5. The properties specified for the models with 7 and 9 SMs seem wrong.
+The properties for 7 and 9 SMs do not have all the difference between pairs.
+For example, in the one with 7 SMs the property for SM1_x - SM_6 > 2 * max_drift is missing.

@@ -1,0 +1,32 @@
+README for files used in the experiments of the paper: 
+Benchmark for Verification of Fault-Tolerant Clock Synchronization Algorithms
+************************
+We provide the following XML files which we used in our experiments:
+
+TTEthernet_Simplified_5.xml
+TTEthernet_Simplified_7.xml
+TTEthernet_Simplified_9.xml 
+
+To each XML file corresponds a CFG (configuration file):
+
+TTEthernet_Simplified_5.cfg
+TTEthernet_Simplified_7.cfg
+TTEthernet_Simplified_9.cfg 
+
+
+Additionally, we provide transformed files as per the quasi-dependent variables approach:
+
+TTEthernet_Simplified_5K.xml
+TTEthernet_Simplified_7K.xml
+TTEthernet_Simplified_9K.xml 
+
+TTEthernet_Simplified_5K.cfg
+TTEthernet_Simplified_7K.cfg
+TTEthernet_Simplified_9K.cfg 
+
+
+We carried out our experiments by using SpaceEx VM Server in VMX format (VMWare) v0.9.8b, 
+which can be downloaded in the following URL: http://spaceex.imag.fr/download-6. 
+We recommend to follow the instructions described at the mentioned link for using SpaceEx.  
+
+
