@@ -28,8 +28,8 @@ Any question about the benchmark can be done to: sergio.mover <at> colorado.edu
 
 The benchmarks are:
 1. navigation_pwc: *WARNING* partial description
-2. rod: *WARNING* no description
-3. dist_controller: *WARNING* no description
-4. TTEThernet: *WARNING* there are still question about this benchmark
+2. rod: *WARNING* not available yet
+3. dist_controller: *WARNING* not available yet
+4. TTEThernet: *WARNING* there are still questions about this benchmark
 that should be answered by their authors.
 Thise benchmark is taken from the ARCH benchmark archive
