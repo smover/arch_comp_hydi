@@ -4,29 +4,29 @@ Questions
 1. The model is completely synchronous
 
 All the automata (CM1, CM2, SM1, ...) synchronize on the same labels sync, send, and back.
-This means that if CM1 moves on a transition labeled with sync, then all the other automata must also move on a transition labeled sync (the same for send and back).
-Now all the SMs and CMs move synchronously on send, sync and back.
+This means that if CM1 moves on a transition labeled with sync, then all the other automata must also move on a transition labeled with sync (the same for send and back).
+Now all the SMs and CMs move synchronously on send, sync and back, and there are never asynchronous actions.
 
-Is it the intended behavior?
+Is it the intended behavior of the model?
 
 
-2. CM1 and CM2 are *exactly* the same.
-The two CMs always read from one SM, and never from different CMs.
-Hence, CM1 and CM2 are always the same!
-Why do we need them?
+2. The CM1 and CM2 automata are *exactly* the same.
+The two CMs always read from the same SM, and never from different CMs. Their input parameters and labels are the same.
+Why do we need both of them?
 
-3. Adding more SM automata in the protocol is not useful.
-One just need two SMs, the one that is used by the CMs to read the
-clock value and another that tries to sync its clock.
+
+3. Adding more SM automata in the protocol does not seem very useful.
+One just need two SMs, the one that is used by the CMs to read the clock value and another that tries to sync its clock.
 
 
 4. Verification results with spaceex
 The verification, already for TTEthernet_Simplified_5.xml, terminates using the given configuration file TTEthernet_Simplified_5.cfg, but it does *NOT* reach a fix point.
-Spaceex reaches the limit of 500 iterations and stop, but the property is not proved.
+Spaceex reaches the limit of 500 iterations and stops, but the property is not proved.
 
-I left the model checker run for 3 hours and it did not terminate.
+I increased the maximum number of iterations and left the model checker run for 3 hours, without seeing it terminate.
+Is it the expected verification result?
 
 
 5. The properties specified for the models with 7 and 9 SMs seem wrong.
-The properties for 7 and 9 SMs do not have all the difference between pairs.
-For example, in the one with 7 SMs the property for SM1_x - SM_6 > 2 * max_drift is missing.
+The properties for 7 and 9 SMs do not have the inequalities between all the possible pairs.
+For example, in the one with 7 SMs the property for SM1_x - SM_6 > 2 * max_drift is missing (it seems an issue given by copying the property from the example with 5 SMs).
