@@ -303,16 +303,10 @@ CM2' ==0</flow>
   <component id="Time">
     <param name="t" type="real" local="false" d1="1" d2="1" dynamics="any" />
     <param name="trans" type="label" local="true" />
-    <location id="1" name="timing" x="219.0" y="212.0">
-      <invariant>t&lt;=1000</invariant>
+    <location id="1" name="timing" x="216.0" y="199.0" width="176.0" height="84.0">
+      <invariant>t&lt;=3000</invariant>
       <flow>t'==1</flow>
     </location>
-    <transition source="1" target="1">
-      <label>trans</label>
-      <guard>t&gt;=1000</guard>
-      <assignment>t:=0</assignment>
-      <labelposition x="49.0" y="-20.0" width="90.0" height="50.0" />
-    </transition>
   </component>
   <component id="System">
     <param name="t" type="real" local="false" d1="1" d2="1" dynamics="any" controlled="true" />

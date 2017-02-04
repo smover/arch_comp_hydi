@@ -61,6 +61,8 @@ instances varying the number of sensors.
 Here we provide a copy of their models.
 Refer to the original documentation in `/benchmarks/TTEthernet/tt_ethernet_description.pdf`.
 
+NOTE: your tool should start the verification by using the model without the "K" suffix (e.g. TTEthernet_Simplified_5.xml and not TTEthernet_Simplified_5K.xml)
+The "K" suffix refers to a set of simplified models.
 
 
 [1] ```
