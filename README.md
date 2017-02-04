@@ -1,3 +1,7 @@
+*WARNING* the description of the benchmarks in this branch is still not complete. Use the master branch!
+Each benchmark will contain a description and, for each instance of
+the benchmark, a version in spaceex and hydi format.
+
 # Shared benchmarks for the ARCH competition
 
 The repository contains the definition of the benchmarks proposed for the ARCH competition.
@@ -5,10 +9,6 @@ The repository contains the definition of the benchmarks proposed for the ARCH c
 The benchmarks are from the HPWC (Hybrid piece-wise constant) dynamic and can be used in the categories: HPWC and TFREE.
 
 
-
-*WARNING* the description of the benchmarks is still not complete.
-Each benchmark will contain a description and, for each instance of
-the benchmark, a version in spaceex and hydi format.
 
 In the meantime, a *draft* of the benchmark instances can be found here:
 https://es.fbk.eu/people/mover/tests/tacas15hycomp.tar.bz2
