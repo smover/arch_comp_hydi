@@ -1,0 +1,364 @@
+-- Generated on Tue Oct 14 01:35:42 CEST 2014
+MODULE main
+
+-- set the parametrs 
+
+#define def_sampletime_par 1
+#define def_lost_packet_time_par 0.25
+#define def_inity_par 1
+
+#define invarscheduler_par 0.25
+#define def_computation_offset_par 0.3125
+
+#define boundcontroller_par 1
+#define waittime_par 0.25
+#define waittime2_par 0.25
+#define computationtime_par 1
+#define mincomputationtime_par 1.25
+#define invar_on_rec_par 0.25
+
+VAR
+sensor_1 : SensorType(4, def_inity_par, def_sampletime_par);
+sensor_2 : SensorType(8, def_inity_par, def_sampletime_par);
+sensor_3 : SensorType(12, def_inity_par, def_sampletime_par);
+scheduler: SchedulerType(invarscheduler_par, def_computation_offset_par);
+controller: ControllerType(invar_on_rec_par, boundcontroller_par, waittime_par, waittime2_par, computationtime_par, mincomputationtime_par);
+
+-- Synchronization constraints
+-- synch of sensor_1 with scheduler
+SYNC sensor_1, scheduler EVENTS request_evt, request_1;
+SYNC sensor_1, scheduler EVENTS read_evt, read_1;
+-- synch of sensor_1 with controller
+SYNC sensor_1, controller EVENTS send_evt, send_1;
+SYNC sensor_1, controller EVENTS ack_evt, ack_1;
+-- synch of sensor_2 with scheduler
+SYNC sensor_2, scheduler EVENTS request_evt, request_2;
+SYNC sensor_2, scheduler EVENTS read_evt, read_2;
+-- synch of sensor_2 with controller
+SYNC sensor_2, controller EVENTS send_evt, send_2;
+SYNC sensor_2, controller EVENTS ack_evt, ack_2;
+-- synch of sensor_3 with scheduler
+SYNC sensor_3, scheduler EVENTS request_evt, request_3;
+SYNC sensor_3, scheduler EVENTS read_evt, read_3;
+-- synch of sensor_3 with controller
+SYNC sensor_3, controller EVENTS send_evt, send_3;
+SYNC sensor_3, controller EVENTS ack_evt, ack_3;
+
+INVARSPEC !(sensor_1.location = send & sensor_2.location = send  & sensor_3.location = send  )
+
+-- MIRROR sensor_1.location
+-- MIRROR sensor_2.location
+-- MIRROR sensor_3.location
+-- MIRROR controller.location
+-- MIRROR scheduler.location
+
+-- definition of a sensor
+-- lost_packet_time: threshold before a packet is lost
+MODULE SensorType(lost_packet_time, inity, sampletime)
+
+VAR
+  location : {done, read, wait, send};
+  y : continuous; -- stopwatch
+
+EVENT request_evt, read_evt, send_evt, ack_evt;
+
+INIT
+  location = done & y = inity;
+
+FLOW location in {done, wait} -> der(y) = 1;
+FLOW location in {read, send} -> der(y) = 0;
+
+
+TRANS
+  (EVENT = request_evt -> 
+   (
+    (location = done & y >= sampletime & next(location) = read & next(y) = y) |
+    (location = wait & y >= lost_packet_time & next(location) = read & next(y) = y)
+   )
+  ) &
+  (EVENT = read_evt -> 
+   (
+    (location = read & next(location) = wait & next(y) = 0)
+   )
+  ) &
+  (EVENT = send_evt -> 
+   (
+    (location = wait  & next(location) = send & next(y) = y)
+   )
+  ) &
+  (EVENT = ack_evt -> 
+   (
+    (location = send & next(location) = done & next(y) = 0)
+   )
+  );
+
+INVAR
+  (location = done -> y <= sampletime) &
+  (location = wait -> y <= lost_packet_time);
+-- Module definition of a scheduler.
+MODULE SchedulerType(invarscheduler, def_computation_offset)
+VAR
+location : {idle 
+,loc_sensor_1
+,loc_sensor_2
+,loc_sensor_3
+};
+wait_1 : boolean;
+x_1 : continuous;
+wait_2 : boolean;
+x_2 : continuous;
+x_3 : continuous;
+EVENT 
+read_1, request_1
+, read_2, request_2
+, read_3, request_3
+;
+INIT location = idle 
+& !wait_1
+& x_1 = 0
+& !wait_2
+& x_2 = 0
+& x_3 = 0
+;
+FLOW 
+(location = loc_sensor_1 -> der(x_1) = 1) &
+(location != loc_sensor_1 -> der(x_1) = 0)
+& 
+(location = loc_sensor_2 -> der(x_2) = 1) &
+(location != loc_sensor_2 -> der(x_2) = 0)
+& 
+(location = loc_sensor_3 -> der(x_3) = 1) &
+(location != loc_sensor_3 -> der(x_3) = 0)
+;
+INVAR location = loc_sensor_1 -> (x_1 <= 12);
+INVAR location = loc_sensor_2 -> (x_2 <= 12);
+INVAR location = loc_sensor_3 -> (x_3 <= 12);
+TRANS 
+(EVENT = request_1 -> (
+(location = idle & next(location) = loc_sensor_1 & next(x_1) = 0 
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+)
+| (location = loc_sensor_2 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(wait_2) = wait_2
+)
+| (location = loc_sensor_3 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(wait_2) = wait_2
+)
+)) & 
+(EVENT = read_1 -> 
+(location = loc_sensor_1 & x_1 >= 1*def_computation_offset & 
+case 
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+;esac
+));
+TRANS 
+(EVENT = request_2 -> (
+(location = idle & next(location) = loc_sensor_2 & next(x_2) = 0 
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+)
+| (location = loc_sensor_3 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(wait_1) = wait_1
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_2 & next(wait_1)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(wait_2) = wait_2
+)
+)) & 
+(EVENT = read_2 -> 
+(location = loc_sensor_2 & x_2 >= 2*def_computation_offset & 
+case 
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(wait_2) = wait_2
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+;esac
+));
+TRANS 
+(EVENT = request_3 -> (
+(location = idle & next(location) = loc_sensor_3 & next(x_3) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_3 & next(wait_1)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(wait_2) = wait_2
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_3 & next(wait_2)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(wait_1) = wait_1
+)
+)) & 
+(EVENT = read_3 -> 
+(location = loc_sensor_3 & x_3 >= 3*def_computation_offset & 
+case 
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(wait_1) = wait_1
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(wait_2) = wait_2
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+;esac
+));
+-- Module definition of a scheduler.
+MODULE ControllerType(invar_on_rec, boundcontroller, waittime, waittime2, computationtime, mincomputationtime)
+VAR
+  location : {rest, rec, wait, compute};
+  z : continuous;  
+  received : array 1 .. 3 of boolean;
+
+EVENT signal, expire , send_1, ack_1, send_2, ack_2, send_3, ack_3;
+INIT location = rest & z = 0 & (! received[1]) & (! received[2]) & (! received[3]);
+FLOW
+  (location = rest) -> der(z) = 0;
+FLOW
+  (location != rest) -> der(z) = 1;
+    INVAR
+    (location = rec -> z <= 1) &
+    (location = wait -> z <= boundcontroller) & -- would be 60
+    (location = compute -> z <= computationtime); -- 10 z <= 56
+TRANS 
+(EVENT = send_1 -> (
+(location = rest & 
+(! received[1]) & 
+next(z) = 0 & next(location) = rec & next(received[1]) 
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & TRUE)
+| (location = wait & 
+(! received[1]) & 
+next(z) = 0 & next(location) = rec & next(received[1]) 
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+)
+));
+TRANS 
+(EVENT = ack_1 -> (
+(location = rec & 
+(received[1]) 
+& ! (received[2] & received[3]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+)
+));
+TRANS 
+(EVENT = send_2 -> (
+(location = rest & 
+(! received[2]) & 
+next(z) = 0 & next(location) = rec & next(received[2]) 
+ & next(received[1]) = received[1]
+ & next(received[3]) = received[3]
+ & TRUE)
+| (location = wait & 
+(! received[2]) & 
+next(z) = 0 & next(location) = rec & next(received[2]) 
+ & next(received[1]) = received[1]
+ & next(received[3]) = received[3]
+)
+));
+TRANS 
+(EVENT = ack_2 -> (
+(location = rec & 
+(received[2]) 
+& ! (received[1] & received[3]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+)
+));
+TRANS 
+(EVENT = send_3 -> (
+(location = rest & 
+(! received[3]) & 
+next(z) = 0 & next(location) = rec & next(received[3]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & TRUE)
+| (location = wait & 
+(! received[3]) & 
+next(z) = 0 & next(location) = rec & next(received[3]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+)
+));
+TRANS 
+(EVENT = ack_3 -> (
+(location = rec & 
+(received[3]) 
+& ! (received[1] & received[2]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+)
+));
+TRANS 
+(EVENT = expire -> (
+(location = wait & 
+!(received[1]& received[2]& received[3])& next(z) = z 
+& next(location) = rest 
+& !next(received[1])& !next(received[2])& !next(received[3]))
+));
+TRANS 
+(EVENT = signal -> (
+(location = compute & 
+z >= mincomputationtime & next(location) = rest 
+ & next(z) = z 
+& !next(received[1])& !next(received[2])& !next(received[3]))
+));

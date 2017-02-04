@@ -1,10 +1,10 @@
 # Shared benchmarks for the ARCH competition
 
-The repository contains the definition of the benchmarks proposed for
-the ARCH competition.
+The repository contains the definition of the benchmarks proposed for the ARCH competition.
 
-The benchmarks are from the HPWC (Hybrid piece-wise constant) dynamic
-and can be used in the categories: HPWC and TFREE.
+The benchmarks are from the HPWC (Hybrid piece-wise constant) dynamic and can be used in the categories: HPWC and TFREE.
+
+
 
 *WARNING* the description of the benchmarks is still not complete.
 Each benchmark will contain a description and, for each instance of

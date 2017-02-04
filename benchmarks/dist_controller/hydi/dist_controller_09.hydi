@@ -1,0 +1,3001 @@
+-- Generated on Tue Oct 14 01:35:43 CEST 2014
+MODULE main
+
+-- set the parametrs 
+
+#define def_sampletime_par 1
+#define def_lost_packet_time_par 0.25
+#define def_inity_par 1
+
+#define invarscheduler_par 0.25
+#define def_computation_offset_par 0.3125
+
+#define boundcontroller_par 1
+#define waittime_par 0.25
+#define waittime2_par 0.25
+#define computationtime_par 1
+#define mincomputationtime_par 1.25
+#define invar_on_rec_par 0.25
+
+VAR
+sensor_1 : SensorType(4, def_inity_par, def_sampletime_par);
+sensor_2 : SensorType(8, def_inity_par, def_sampletime_par);
+sensor_3 : SensorType(12, def_inity_par, def_sampletime_par);
+sensor_4 : SensorType(16, def_inity_par, def_sampletime_par);
+sensor_5 : SensorType(20, def_inity_par, def_sampletime_par);
+sensor_6 : SensorType(24, def_inity_par, def_sampletime_par);
+sensor_7 : SensorType(28, def_inity_par, def_sampletime_par);
+sensor_8 : SensorType(32, def_inity_par, def_sampletime_par);
+sensor_9 : SensorType(36, def_inity_par, def_sampletime_par);
+scheduler: SchedulerType(invarscheduler_par, def_computation_offset_par);
+controller: ControllerType(invar_on_rec_par, boundcontroller_par, waittime_par, waittime2_par, computationtime_par, mincomputationtime_par);
+
+-- Synchronization constraints
+-- synch of sensor_1 with scheduler
+SYNC sensor_1, scheduler EVENTS request_evt, request_1;
+SYNC sensor_1, scheduler EVENTS read_evt, read_1;
+-- synch of sensor_1 with controller
+SYNC sensor_1, controller EVENTS send_evt, send_1;
+SYNC sensor_1, controller EVENTS ack_evt, ack_1;
+-- synch of sensor_2 with scheduler
+SYNC sensor_2, scheduler EVENTS request_evt, request_2;
+SYNC sensor_2, scheduler EVENTS read_evt, read_2;
+-- synch of sensor_2 with controller
+SYNC sensor_2, controller EVENTS send_evt, send_2;
+SYNC sensor_2, controller EVENTS ack_evt, ack_2;
+-- synch of sensor_3 with scheduler
+SYNC sensor_3, scheduler EVENTS request_evt, request_3;
+SYNC sensor_3, scheduler EVENTS read_evt, read_3;
+-- synch of sensor_3 with controller
+SYNC sensor_3, controller EVENTS send_evt, send_3;
+SYNC sensor_3, controller EVENTS ack_evt, ack_3;
+-- synch of sensor_4 with scheduler
+SYNC sensor_4, scheduler EVENTS request_evt, request_4;
+SYNC sensor_4, scheduler EVENTS read_evt, read_4;
+-- synch of sensor_4 with controller
+SYNC sensor_4, controller EVENTS send_evt, send_4;
+SYNC sensor_4, controller EVENTS ack_evt, ack_4;
+-- synch of sensor_5 with scheduler
+SYNC sensor_5, scheduler EVENTS request_evt, request_5;
+SYNC sensor_5, scheduler EVENTS read_evt, read_5;
+-- synch of sensor_5 with controller
+SYNC sensor_5, controller EVENTS send_evt, send_5;
+SYNC sensor_5, controller EVENTS ack_evt, ack_5;
+-- synch of sensor_6 with scheduler
+SYNC sensor_6, scheduler EVENTS request_evt, request_6;
+SYNC sensor_6, scheduler EVENTS read_evt, read_6;
+-- synch of sensor_6 with controller
+SYNC sensor_6, controller EVENTS send_evt, send_6;
+SYNC sensor_6, controller EVENTS ack_evt, ack_6;
+-- synch of sensor_7 with scheduler
+SYNC sensor_7, scheduler EVENTS request_evt, request_7;
+SYNC sensor_7, scheduler EVENTS read_evt, read_7;
+-- synch of sensor_7 with controller
+SYNC sensor_7, controller EVENTS send_evt, send_7;
+SYNC sensor_7, controller EVENTS ack_evt, ack_7;
+-- synch of sensor_8 with scheduler
+SYNC sensor_8, scheduler EVENTS request_evt, request_8;
+SYNC sensor_8, scheduler EVENTS read_evt, read_8;
+-- synch of sensor_8 with controller
+SYNC sensor_8, controller EVENTS send_evt, send_8;
+SYNC sensor_8, controller EVENTS ack_evt, ack_8;
+-- synch of sensor_9 with scheduler
+SYNC sensor_9, scheduler EVENTS request_evt, request_9;
+SYNC sensor_9, scheduler EVENTS read_evt, read_9;
+-- synch of sensor_9 with controller
+SYNC sensor_9, controller EVENTS send_evt, send_9;
+SYNC sensor_9, controller EVENTS ack_evt, ack_9;
+
+INVARSPEC !(sensor_1.location = send & sensor_2.location = send  & sensor_3.location = send  & sensor_4.location = send  & sensor_5.location = send  & sensor_6.location = send  & sensor_7.location = send  & sensor_8.location = send  & sensor_9.location = send  )
+
+-- MIRROR sensor_1.location
+-- MIRROR sensor_2.location
+-- MIRROR sensor_3.location
+-- MIRROR sensor_4.location
+-- MIRROR sensor_5.location
+-- MIRROR sensor_6.location
+-- MIRROR sensor_7.location
+-- MIRROR sensor_8.location
+-- MIRROR sensor_9.location
+-- MIRROR controller.location
+-- MIRROR scheduler.location
+
+-- definition of a sensor
+-- lost_packet_time: threshold before a packet is lost
+MODULE SensorType(lost_packet_time, inity, sampletime)
+
+VAR
+  location : {done, read, wait, send};
+  y : continuous; -- stopwatch
+
+EVENT request_evt, read_evt, send_evt, ack_evt;
+
+INIT
+  location = done & y = inity;
+
+FLOW location in {done, wait} -> der(y) = 1;
+FLOW location in {read, send} -> der(y) = 0;
+
+
+TRANS
+  (EVENT = request_evt -> 
+   (
+    (location = done & y >= sampletime & next(location) = read & next(y) = y) |
+    (location = wait & y >= lost_packet_time & next(location) = read & next(y) = y)
+   )
+  ) &
+  (EVENT = read_evt -> 
+   (
+    (location = read & next(location) = wait & next(y) = 0)
+   )
+  ) &
+  (EVENT = send_evt -> 
+   (
+    (location = wait  & next(location) = send & next(y) = y)
+   )
+  ) &
+  (EVENT = ack_evt -> 
+   (
+    (location = send & next(location) = done & next(y) = 0)
+   )
+  );
+
+INVAR
+  (location = done -> y <= sampletime) &
+  (location = wait -> y <= lost_packet_time);
+-- Module definition of a scheduler.
+MODULE SchedulerType(invarscheduler, def_computation_offset)
+VAR
+location : {idle 
+,loc_sensor_1
+,loc_sensor_2
+,loc_sensor_3
+,loc_sensor_4
+,loc_sensor_5
+,loc_sensor_6
+,loc_sensor_7
+,loc_sensor_8
+,loc_sensor_9
+};
+wait_1 : boolean;
+x_1 : continuous;
+wait_2 : boolean;
+x_2 : continuous;
+wait_3 : boolean;
+x_3 : continuous;
+wait_4 : boolean;
+x_4 : continuous;
+wait_5 : boolean;
+x_5 : continuous;
+wait_6 : boolean;
+x_6 : continuous;
+wait_7 : boolean;
+x_7 : continuous;
+wait_8 : boolean;
+x_8 : continuous;
+x_9 : continuous;
+EVENT 
+read_1, request_1
+, read_2, request_2
+, read_3, request_3
+, read_4, request_4
+, read_5, request_5
+, read_6, request_6
+, read_7, request_7
+, read_8, request_8
+, read_9, request_9
+;
+INIT location = idle 
+& !wait_1
+& x_1 = 0
+& !wait_2
+& x_2 = 0
+& !wait_3
+& x_3 = 0
+& !wait_4
+& x_4 = 0
+& !wait_5
+& x_5 = 0
+& !wait_6
+& x_6 = 0
+& !wait_7
+& x_7 = 0
+& !wait_8
+& x_8 = 0
+& x_9 = 0
+;
+FLOW 
+(location = loc_sensor_1 -> der(x_1) = 1) &
+(location != loc_sensor_1 -> der(x_1) = 0)
+& 
+(location = loc_sensor_2 -> der(x_2) = 1) &
+(location != loc_sensor_2 -> der(x_2) = 0)
+& 
+(location = loc_sensor_3 -> der(x_3) = 1) &
+(location != loc_sensor_3 -> der(x_3) = 0)
+& 
+(location = loc_sensor_4 -> der(x_4) = 1) &
+(location != loc_sensor_4 -> der(x_4) = 0)
+& 
+(location = loc_sensor_5 -> der(x_5) = 1) &
+(location != loc_sensor_5 -> der(x_5) = 0)
+& 
+(location = loc_sensor_6 -> der(x_6) = 1) &
+(location != loc_sensor_6 -> der(x_6) = 0)
+& 
+(location = loc_sensor_7 -> der(x_7) = 1) &
+(location != loc_sensor_7 -> der(x_7) = 0)
+& 
+(location = loc_sensor_8 -> der(x_8) = 1) &
+(location != loc_sensor_8 -> der(x_8) = 0)
+& 
+(location = loc_sensor_9 -> der(x_9) = 1) &
+(location != loc_sensor_9 -> der(x_9) = 0)
+;
+INVAR location = loc_sensor_1 -> (x_1 <= 36);
+INVAR location = loc_sensor_2 -> (x_2 <= 36);
+INVAR location = loc_sensor_3 -> (x_3 <= 36);
+INVAR location = loc_sensor_4 -> (x_4 <= 36);
+INVAR location = loc_sensor_5 -> (x_5 <= 36);
+INVAR location = loc_sensor_6 -> (x_6 <= 36);
+INVAR location = loc_sensor_7 -> (x_7 <= 36);
+INVAR location = loc_sensor_8 -> (x_8 <= 36);
+INVAR location = loc_sensor_9 -> (x_9 <= 36);
+TRANS 
+(EVENT = request_1 -> (
+(location = idle & next(location) = loc_sensor_1 & next(x_1) = 0 
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_2 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_3 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_4 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_5 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_6 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_7 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_8 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_1)  & next(x_1) = 0
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_1 -> 
+(location = loc_sensor_1 & x_1 >= 1*def_computation_offset & 
+case 
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_2 -> (
+(location = idle & next(location) = loc_sensor_2 & next(x_2) = 0 
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_3 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_4 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_5 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_6 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_7 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_8 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_2)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_2 & next(wait_1)  & next(x_2) = 0
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_2 -> 
+(location = loc_sensor_2 & x_2 >= 2*def_computation_offset & 
+case 
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_3 -> (
+(location = idle & next(location) = loc_sensor_3 & next(x_3) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_4 & next(location) = location & next(wait_3)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_5 & next(location) = location & next(wait_3)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_6 & next(location) = location & next(wait_3)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_7 & next(location) = location & next(wait_3)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_8 & next(location) = location & next(wait_3)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_3)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_3 & next(wait_1)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_3 & next(wait_2)  & next(x_3) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_3 -> 
+(location = loc_sensor_3 & x_3 >= 3*def_computation_offset & 
+case 
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_4 -> (
+(location = idle & next(location) = loc_sensor_4 & next(x_4) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_5 & next(location) = location & next(wait_4)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_6 & next(location) = location & next(wait_4)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_7 & next(location) = location & next(wait_4)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_8 & next(location) = location & next(wait_4)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_4)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_4 & next(wait_1)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_4 & next(wait_2)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_3 & next(location) = loc_sensor_4 & next(wait_3)  & next(x_4) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_4 -> 
+(location = loc_sensor_4 & x_4 >= 4*def_computation_offset & 
+case 
+wait_3 : next(location) = loc_sensor_3 & !next(wait_3) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_5 -> (
+(location = idle & next(location) = loc_sensor_5 & next(x_5) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_6 & next(location) = location & next(wait_5)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_7 & next(location) = location & next(wait_5)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_8 & next(location) = location & next(wait_5)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_5)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_5 & next(wait_1)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_5 & next(wait_2)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_3 & next(location) = loc_sensor_5 & next(wait_3)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_4 & next(location) = loc_sensor_5 & next(wait_4)  & next(x_5) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_5 -> 
+(location = loc_sensor_5 & x_5 >= 5*def_computation_offset & 
+case 
+wait_4 : next(location) = loc_sensor_4 & !next(wait_4) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_3 : next(location) = loc_sensor_3 & !next(wait_3) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_6 -> (
+(location = idle & next(location) = loc_sensor_6 & next(x_6) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_7 & next(location) = location & next(wait_6)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_8 & next(location) = location & next(wait_6)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_6)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_6 & next(wait_1)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_6 & next(wait_2)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_3 & next(location) = loc_sensor_6 & next(wait_3)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_4 & next(location) = loc_sensor_6 & next(wait_4)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_5 & next(location) = loc_sensor_6 & next(wait_5)  & next(x_6) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_6 -> 
+(location = loc_sensor_6 & x_6 >= 6*def_computation_offset & 
+case 
+wait_5 : next(location) = loc_sensor_5 & !next(wait_5) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_4 : next(location) = loc_sensor_4 & !next(wait_4) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_3 : next(location) = loc_sensor_3 & !next(wait_3) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_7 -> (
+(location = idle & next(location) = loc_sensor_7 & next(x_7) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_8 & next(location) = location & next(wait_7)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_7)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_7 & next(wait_1)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_7 & next(wait_2)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_3 & next(location) = loc_sensor_7 & next(wait_3)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_4 & next(location) = loc_sensor_7 & next(wait_4)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_5 & next(location) = loc_sensor_7 & next(wait_5)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_6 & next(location) = loc_sensor_7 & next(wait_6)  & next(x_7) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_7 -> 
+(location = loc_sensor_7 & x_7 >= 7*def_computation_offset & 
+case 
+wait_6 : next(location) = loc_sensor_6 & !next(wait_6) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_5 : next(location) = loc_sensor_5 & !next(wait_5) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_4 : next(location) = loc_sensor_4 & !next(wait_4) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_3 : next(location) = loc_sensor_3 & !next(wait_3) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_8 -> (
+(location = idle & next(location) = loc_sensor_8 & next(x_8) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+| (location = loc_sensor_9 & next(location) = location & next(wait_8)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_8 & next(wait_1)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_8 & next(wait_2)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_3 & next(location) = loc_sensor_8 & next(wait_3)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_4 & next(location) = loc_sensor_8 & next(wait_4)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_5 & next(location) = loc_sensor_8 & next(wait_5)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_6 & next(location) = loc_sensor_8 & next(wait_6)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_7 & next(location) = loc_sensor_8 & next(wait_7)  & next(x_8) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_8) = wait_8
+)
+)) & 
+(EVENT = read_8 -> 
+(location = loc_sensor_8 & x_8 >= 8*def_computation_offset & 
+case 
+wait_7 : next(location) = loc_sensor_7 & !next(wait_7) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_8) = wait_8
+;
+wait_6 : next(location) = loc_sensor_6 & !next(wait_6) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_5 : next(location) = loc_sensor_5 & !next(wait_5) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_4 : next(location) = loc_sensor_4 & !next(wait_4) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_3 : next(location) = loc_sensor_3 & !next(wait_3) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_9) = x_9
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+TRANS 
+(EVENT = request_9 -> (
+(location = idle & next(location) = loc_sensor_9 & next(x_9) = 0 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_1 & next(location) = loc_sensor_9 & next(wait_1)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_2 & next(location) = loc_sensor_9 & next(wait_2)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_3 & next(location) = loc_sensor_9 & next(wait_3)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_4 & next(location) = loc_sensor_9 & next(wait_4)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_5 & next(location) = loc_sensor_9 & next(wait_5)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_6 & next(location) = loc_sensor_9 & next(wait_6)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_7 & next(location) = loc_sensor_9 & next(wait_7)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_8) = wait_8
+)
+ | (location = loc_sensor_8 & next(location) = loc_sensor_9 & next(wait_8)  & next(x_9) = 0
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+)
+)) & 
+(EVENT = read_9 -> 
+(location = loc_sensor_9 & x_9 >= 9*def_computation_offset & 
+case 
+wait_8 : next(location) = loc_sensor_8 & !next(wait_8) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+;
+wait_7 : next(location) = loc_sensor_7 & !next(wait_7) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_8) = wait_8
+;
+wait_6 : next(location) = loc_sensor_6 & !next(wait_6) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_5 : next(location) = loc_sensor_5 & !next(wait_5) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_4 : next(location) = loc_sensor_4 & !next(wait_4) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_3 : next(location) = loc_sensor_3 & !next(wait_3) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_2 : next(location) = loc_sensor_2 & !next(wait_2) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_1) = wait_1
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+wait_1 : next(location) = loc_sensor_1 & !next(wait_1) 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;
+TRUE : next(location) = idle 
+ & next(x_1) = x_1
+ & next(x_2) = x_2
+ & next(x_3) = x_3
+ & next(x_4) = x_4
+ & next(x_5) = x_5
+ & next(x_6) = x_6
+ & next(x_7) = x_7
+ & next(x_8) = x_8
+ & next(x_9) = x_9
+ & next(wait_1) = wait_1
+ & next(wait_2) = wait_2
+ & next(wait_3) = wait_3
+ & next(wait_4) = wait_4
+ & next(wait_5) = wait_5
+ & next(wait_6) = wait_6
+ & next(wait_7) = wait_7
+ & next(wait_8) = wait_8
+;esac
+));
+-- Module definition of a scheduler.
+MODULE ControllerType(invar_on_rec, boundcontroller, waittime, waittime2, computationtime, mincomputationtime)
+VAR
+  location : {rest, rec, wait, compute};
+  z : continuous;  
+  received : array 1 .. 9 of boolean;
+
+EVENT signal, expire , send_1, ack_1, send_2, ack_2, send_3, ack_3, send_4, ack_4, send_5, ack_5, send_6, ack_6, send_7, ack_7, send_8, ack_8, send_9, ack_9;
+INIT location = rest & z = 0 & (! received[1]) & (! received[2]) & (! received[3]) & (! received[4]) & (! received[5]) & (! received[6]) & (! received[7]) & (! received[8]) & (! received[9]);
+FLOW
+  (location = rest) -> der(z) = 0;
+FLOW
+  (location != rest) -> der(z) = 1;
+    INVAR
+    (location = rec -> z <= 1) &
+    (location = wait -> z <= boundcontroller) & -- would be 180
+    (location = compute -> z <= computationtime); -- 10 z <= 56
+TRANS 
+(EVENT = send_1 -> (
+(location = rest & 
+(! received[1]) & 
+next(z) = 0 & next(location) = rec & next(received[1]) 
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[1]) & 
+next(z) = 0 & next(location) = rec & next(received[1]) 
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_1 -> (
+(location = rec & 
+(received[1]) 
+& ! (received[2] & received[3] & received[4] & received[5] & received[6] & received[7] & received[8] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_2 -> (
+(location = rest & 
+(! received[2]) & 
+next(z) = 0 & next(location) = rec & next(received[2]) 
+ & next(received[1]) = received[1]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[2]) & 
+next(z) = 0 & next(location) = rec & next(received[2]) 
+ & next(received[1]) = received[1]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_2 -> (
+(location = rec & 
+(received[2]) 
+& ! (received[1] & received[3] & received[4] & received[5] & received[6] & received[7] & received[8] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_3 -> (
+(location = rest & 
+(! received[3]) & 
+next(z) = 0 & next(location) = rec & next(received[3]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[3]) & 
+next(z) = 0 & next(location) = rec & next(received[3]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_3 -> (
+(location = rec & 
+(received[3]) 
+& ! (received[1] & received[2] & received[4] & received[5] & received[6] & received[7] & received[8] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_4 -> (
+(location = rest & 
+(! received[4]) & 
+next(z) = 0 & next(location) = rec & next(received[4]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[4]) & 
+next(z) = 0 & next(location) = rec & next(received[4]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_4 -> (
+(location = rec & 
+(received[4]) 
+& ! (received[1] & received[2] & received[3] & received[5] & received[6] & received[7] & received[8] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_5 -> (
+(location = rest & 
+(! received[5]) & 
+next(z) = 0 & next(location) = rec & next(received[5]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[5]) & 
+next(z) = 0 & next(location) = rec & next(received[5]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_5 -> (
+(location = rec & 
+(received[5]) 
+& ! (received[1] & received[2] & received[3] & received[4] & received[6] & received[7] & received[8] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_6 -> (
+(location = rest & 
+(! received[6]) & 
+next(z) = 0 & next(location) = rec & next(received[6]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[6]) & 
+next(z) = 0 & next(location) = rec & next(received[6]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_6 -> (
+(location = rec & 
+(received[6]) 
+& ! (received[1] & received[2] & received[3] & received[4] & received[5] & received[7] & received[8] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_7 -> (
+(location = rest & 
+(! received[7]) & 
+next(z) = 0 & next(location) = rec & next(received[7]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[7]) & 
+next(z) = 0 & next(location) = rec & next(received[7]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_7 -> (
+(location = rec & 
+(received[7]) 
+& ! (received[1] & received[2] & received[3] & received[4] & received[5] & received[6] & received[8] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_8 -> (
+(location = rest & 
+(! received[8]) & 
+next(z) = 0 & next(location) = rec & next(received[8]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[9]) = received[9]
+ & TRUE)
+| (location = wait & 
+(! received[8]) & 
+next(z) = 0 & next(location) = rec & next(received[8]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = ack_8 -> (
+(location = rec & 
+(received[8]) 
+& ! (received[1] & received[2] & received[3] & received[4] & received[5] & received[6] & received[7] & received[9]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = send_9 -> (
+(location = rest & 
+(! received[9]) & 
+next(z) = 0 & next(location) = rec & next(received[9]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & TRUE)
+| (location = wait & 
+(! received[9]) & 
+next(z) = 0 & next(location) = rec & next(received[9]) 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+)
+));
+TRANS 
+(EVENT = ack_9 -> (
+(location = rec & 
+(received[9]) 
+& ! (received[1] & received[2] & received[3] & received[4] & received[5] & received[6] & received[7] & received[8]) & z >= waittime & next(z) = z & next(location) = wait 
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+| (location = rec 
+& received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9]& z >= waittime2 & next(z) = 0 & next(location) = compute
+ & next(received[1]) = received[1]
+ & next(received[2]) = received[2]
+ & next(received[3]) = received[3]
+ & next(received[4]) = received[4]
+ & next(received[5]) = received[5]
+ & next(received[6]) = received[6]
+ & next(received[7]) = received[7]
+ & next(received[8]) = received[8]
+ & next(received[9]) = received[9]
+)
+));
+TRANS 
+(EVENT = expire -> (
+(location = wait & 
+!(received[1]& received[2]& received[3]& received[4]& received[5]& received[6]& received[7]& received[8]& received[9])& next(z) = z 
+& next(location) = rest 
+& !next(received[1])& !next(received[2])& !next(received[3])& !next(received[4])& !next(received[5])& !next(received[6])& !next(received[7])& !next(received[8])& !next(received[9]))
+));
+TRANS 
+(EVENT = signal -> (
+(location = compute & 
+z >= mincomputationtime & next(location) = rest 
+ & next(z) = z 
+& !next(received[1])& !next(received[2])& !next(received[3])& !next(received[4])& !next(received[5])& !next(received[6])& !next(received[7])& !next(received[8])& !next(received[9]))
+));
